@@ -2,21 +2,21 @@
 
 (require "test-utils.rkt" (for-syntax racket/base)
          (rep type-rep)
-         (types abbrev numeric-tower union)
+         (types abbrev numeric-tower)
          rackunit)
 
 (provide tests)
 (gen-test-main)
 
-(define (-base x) (make-Base x #'dummy values #f))
+(define (-opaque x) (make-Opaque x))
 
 
 (define-syntax (te-tests stx)
   (define (single-test stx)
     (syntax-case stx (FAIL)
       [(FAIL t s) (syntax/loc stx (test-check (format "FAIL ~a" '(t s))
-                                    (lambda (a b) (not (type-equal? a b))) t s))]
-      [(t s) (syntax/loc stx (test-check (format "~a" '(t s)) type-equal? t s))]))
+                                    (lambda (a b) (not (equal? a b))) t s))]
+      [(t s) (syntax/loc stx (test-check (format "~a" '(t s)) equal? t s))]))
   (syntax-case stx ()
     [(_ cl ...)
      #`(test-suite "Tests for type equality"
@@ -38,9 +38,15 @@
    ;; found bug
    [FAIL (Un (-mu heap-node
                   (-struct #'heap-node #f
-                           (map fld* (list (-base 'comparator) -Number (-v a) (Un heap-node (-base 'heap-empty))))))
-             (-base 'heap-empty))
+                           (map fld* (list (-opaque #'comparator)
+                                           -Number
+                                           (-v a)
+                                           (Un heap-node (-opaque #'heap-empty))))))
+             (-opaque #'heap-empty))
          (Un (-mu heap-node
                   (-struct #'heap-node #f
-                           (map fld* (list (-base 'comparator) -Number (-pair -Number -Number) (Un heap-node (-base 'heap-empty))))))
-             (-base 'heap-empty))]))
+                           (map fld* (list (-opaque #'comparator)
+                                           -Number
+                                           (-pair -Number -Number)
+                                           (Un heap-node (-opaque #'heap-empty))))))
+             (-opaque #'heap-empty))]))

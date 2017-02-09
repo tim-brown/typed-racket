@@ -41,7 +41,7 @@
          [_ (int-err "non-symbol methods not supported by Typed Racket: ~a"
                      rcvr-type)])]
       ;; union of objects, check pointwise and union the results
-      [(Union: (list (and objs (Instance: _)) ...))
+      [(Union: (? Bottom?) objs) #:when (andmap Instance? objs)
        (merge-tc-results (map do-check objs))]
       [_ (tc-error/expr/fields
           "send: type mismatch"

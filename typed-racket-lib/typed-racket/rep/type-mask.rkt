@@ -11,7 +11,7 @@
 ;;
 ;; - - Details - -
 ;;
-;; Type masks are represented with a simple 31-bit fixnum.
+;; Type masks are represented with a simple 30-bit fixnum.
 ;;
 ;; If a bit flag in a Type's bitmask is set to 1, it means the Type
 ;; _may_ overlap with the values described by that bit flag.
@@ -30,7 +30,8 @@
          disjoint-masks?
          sub-mask?
          mask:bottom
-         mask:unknown)
+         mask:unknown
+         mask:base+number)
 
 (define-syntax OR (make-rename-transformer #'unsafe-fxior))
 (define-syntax AND (make-rename-transformer #'unsafe-fxand))
@@ -50,10 +51,13 @@
 ;; type mask predicate
 (define-syntax type-mask? (make-rename-transformer #'fixnum?))
 
-;; define the max size of type  masks
+;; define the max size of type  masks -- if we limit the size to
+;; 30 we are guaranteed to be a fixnum on 32 and 64 bit machines.
+;; (30 is the max number of bits available in a 2's complement 
+;; tagged integer on a 32-bit machine)
 (module const racket/base
   (provide max-mask-size)
-  (define max-mask-size 31))
+  (define max-mask-size 30))
 (require 'const (for-syntax 'const))
 
 
@@ -121,16 +125,7 @@
 ;; but which we are not specifically tracking
 
 (declare-type-flags
- ;; a few common base types have their own masks
- mask:null
- mask:true
- mask:false
- mask:char
- mask:symbol
- mask:void
- mask:string
- ;; the other base types use this catch-all
- mask:base-other
+ mask:base
  mask:number
  mask:pair
  mask:mpair
@@ -154,3 +149,5 @@
  mask:class
  mask:instance
  mask:unit)
+
+(define mask:base+number (mask-union mask:base mask:number))

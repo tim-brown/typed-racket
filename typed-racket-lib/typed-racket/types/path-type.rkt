@@ -6,7 +6,7 @@
          (rep object-rep type-rep values-rep)
          (utils tc-utils)
          (typecheck renamer)
-         (types subtype resolve union)
+         (types subtype resolve)
          (except-in (types utils abbrev kw-types) -> ->* one-of/c))
 
 (require-for-cond-contract (rep rep-utils))
@@ -31,7 +31,9 @@
     (match* (t path)
       ;; empty path
       [(t (list)) t]
-    
+
+      ;; -- non-empty path beyond here --
+      
       ;; pair ops
       [((Pair: t s) (cons (CarPE:) rst))
        (path-type rst t (hash))]
@@ -57,12 +59,10 @@
                                             [t (in-value (path-type path t resolved))]
                                             #:when t)
                                   t))]
-      [((Union: ts) _)
-       (apply Un (for*/list ([t (in-list ts)]
-                             [t (in-value (path-type path t resolved))]
-                             #:when t)
-                   t))]
-    
+      [((Union: _ ts) _)
+       ;; drop base types, since they are incompatible w/ a path element
+       (Union-fmap (λ (t) (or (path-type path t resolved) -Bottom)) -Bottom ts)]
+
       ;; paths into polymorphic types
       ;; TODO can this expose unbound type indices... probably. It should be
       ;; shielded with a check for type indexes/variables/whatever.
@@ -70,7 +70,7 @@
       [((PolyDots: _ body-t) _) (path-type path body-t resolved)]
       [((PolyRow: _ _ body-t) _) (path-type path body-t resolved)]
       [((Distinction: _ _ t) _) (path-type path t resolved)]
-    
+
       ;; for private fields in classes
       [((Function: (list (arr: doms (Values: (list (Result: rng _ _))) _ _ _)))
         (cons (FieldPE:) rst))
@@ -78,8 +78,9 @@
 
       ;; types which need resolving
       [((? resolvable?) _) #:when (not (hash-ref resolved t #f))
-                           (path-type path (resolve-once t) (hash-set resolved t #t))]
-    
+       (path-type path (resolve-once t) (hash-set resolved t #t))]
+
       ;; type/path mismatch =(
       [(_ _) #f])))
+
 

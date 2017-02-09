@@ -3,7 +3,7 @@
          (for-syntax racket/base)
          (r:infer infer)
          (rep type-rep)
-         (types abbrev numeric-tower subtype union subtract overlap)
+         (types abbrev numeric-tower subtype subtract overlap)
          rackunit)
 (provide tests)
 (gen-test-main)
@@ -25,7 +25,7 @@
     [(_ [t1 t2 res] ...)
      #'(test-suite "Tests for intersect"
                    (test-check (format "~a ~a" 't1 't2)
-                               type-compare?
+                               type-equiv?
                                (intersect t1 t2) res) ...)]))
 
 
@@ -50,6 +50,22 @@
    [(Un (-val "one") (-val "two")) (Un (-val "one") (-val 1)) (-val "one")]
    ;; intersection cases
    [(-v a) -String (-unsafe-intersect (-v a) -String)]
+   [(-v a)
+    (Un -String (-pair Univ Univ))
+    (Un (-unsafe-intersect (-v a) -String)
+        (-unsafe-intersect (-v a) (-pair Univ Univ)))]
+   [(-v a)
+    (Un -String -Symbol (-pair Univ Univ))
+    (Un (-unsafe-intersect (-v a) -String)
+        (-unsafe-intersect (-v a) -Symbol)
+        (-unsafe-intersect (-v a) (-pair Univ Univ)))]
+   [(-v a)
+    (Un -String -Symbol -Zero -One (-pair Univ Univ))
+    (Un (-unsafe-intersect (-v a) -String)
+        (-unsafe-intersect (-v a) -Symbol)
+        (-unsafe-intersect (-v a) -Zero)
+        (-unsafe-intersect (-v a) -One)
+        (-unsafe-intersect (-v a) (-pair Univ Univ)))]
    [-String (-v a) (-unsafe-intersect (-v a) -String)]
    [(-> -Number -Number) (-> -String -String) (-unsafe-intersect (-> -Number -Number)
                                                                  (-> -String -String))]
@@ -57,7 +73,7 @@
     (-mu x (Un (Un -Number -Symbol) (-pair -Number x)))
     (-mu x (Un -Number (-pair -Number x)))]
    [(make-Listof (-mu x (Un -String (-HT -String x))))
-    (make-Listof (make-HashtableTop))
+    (make-Listof -HashtableTop)
     (make-Listof (-HT -String (-mu x (Un -String (-HT -String x)))))]))
 
 (define-syntax (remo-tests stx)
@@ -65,12 +81,18 @@
     [(_ [t1 t2 res] ...)
      (syntax/loc stx
        (test-suite "Tests for subtract"
-                   (test-check (format "~a ~a" 't1 't2) type-compare? (subtract t1 t2) res) ...))]))
+                   (test-check (format "~a ~a" 't1 't2) type-equiv? (subtract t1 t2) res) ...))]))
 
 (define subtract-tests
   (remo-tests
    [(Un -Number -Symbol) -Number -Symbol]
    [-Number -Number (Un)]
+   [(Un -Zero -Symbol (make-Listof Univ))
+    -Zero
+    (Un -Symbol (make-Listof Univ))]
+   [(-mu x (Un -Zero -Symbol (make-Listof x)))
+    -Zero
+    (Un -Symbol (make-Listof (-mu x (Un -Zero -Symbol (make-Listof x)))))]
    [(-mu x (Un -Number -Symbol (make-Listof x)))
     -Number
     (Un -Symbol (make-Listof (-mu x (Un -Number -Symbol (make-Listof x)))))]
